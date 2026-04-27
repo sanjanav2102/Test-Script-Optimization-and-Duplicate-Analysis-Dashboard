@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Temenos — Duplicate Description Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+/* ── TEMENOS BRAND PALETTE ───────────────────────────────────
+   Primary Red   : #C8102E
+   Primary Navy  : #003087
+   Dark Navy     : #001F5B
+   Light Blue    : #0057A8
+   Accent Blue   : #00A3E0
+   Light Grey    : #F4F6FA
+   Mid Grey      : #D1D7E0
+   Text Dark     : #1A1A2E
+   White         : #FFFFFF
+──────────────────────────────────────────────────────────── */
+
+:root {
+  --red:        #C8102E;
+  --red-light:  #E8354F;
+  --red-muted:  rgba(200,16,46,.12);
+  --navy:       #003087;
+  --navy-dark:  #001F5B;
+  --navy-light: #0057A8;
+  --blue-acc:   #00A3E0;
+  --bg:         #F4F6FA;
+  --bg-white:   #FFFFFF;
+  --border:     #D1D7E0;
+  --border-mid: #B8C2D0;
+  --text:       #1A1A2E;
+  --text-mid:   #4A5568;
+  --text-light: #718096;
+  --mm-color:   #003087;
+  --sy-color:   #C8102E;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ── TOP NAV ─────────────────────────────────── */
+.topnav {
+  background: var(--navy-dark);
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  border-bottom: 3px solid var(--red);
+}
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.nav-logo {
+  width: 34px; height: 34px;
+  background: var(--red);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; color: #fff; font-size: 15px; letter-spacing: -.5px;
+}
+.nav-title {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+.nav-sub { color: rgba(255,255,255,.5); font-size: 12px; font-weight: 400; }
+.nav-badge {
+  background: var(--red);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 3px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+/* ── HERO / HEADER ───────────────────────────── */
+.hero {
+  background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-light) 100%);
+  padding: 48px 40px 40px;
+  position: relative;
+  overflow: hidden;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--red) 0%, var(--blue-acc) 100%);
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -80px; right: -80px;
+  width: 360px; height: 360px;
+  border-radius: 50%;
+  background: rgba(0,160,224,.07);
+  pointer-events: none;
+}
+.hero-inner { position: relative; z-index: 1; }
+.hero-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(200,16,46,.2);
+  border: 1px solid rgba(200,16,46,.4);
+  color: #ff8899;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 5px 14px; border-radius: 2px;
+  margin-bottom: 18px;
+}
+.hero-tag::before { content: '●'; font-size: 7px; }
+h1 {
+  font-size: clamp(26px, 4vw, 40px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+  margin-bottom: 10px;
+}
+h1 span { color: var(--blue-acc); }
+.hero-desc { color: rgba(255,255,255,.6); font-size: 14px; max-width: 560px; margin-bottom: 32px; }
+
+.kpi-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.kpi {
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  padding: 16px 24px;
+  min-width: 160px;
+}
+.kpi-num { font-size: 30px; font-weight: 800; color: #fff; line-height: 1; }
+.kpi-num.red { color: var(--red-light); }
+.kpi-label { font-size: 11px; color: rgba(255,255,255,.5); letter-spacing: .06em; text-transform: uppercase; margin-top: 4px; }
+
+/* ── MODULE TABS ─────────────────────────────── */
+.tabs-wrapper {
+  background: var(--bg-white);
+  border-bottom: 1px solid var(--border);
+  padding: 0 40px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,48,135,.08);
+}
+.tabs {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 16px 20px;
+  border: none;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-light);
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+  transition: all .2s;
+  position: relative;
+  top: 1px;
+}
+.tab-btn:hover { color: var(--navy); background: rgba(0,48,135,.03); }
+.tab-btn.active {
+  color: var(--navy);
+  font-weight: 700;
+  border-bottom-color: var(--red);
+}
+.tab-btn .tab-icon { font-size: 15px; }
+.tab-count {
+  background: var(--red-muted);
+  color: var(--red);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  letter-spacing: .03em;
+}
+.tab-btn.active .tab-count { background: var(--red); color: #fff; }
+
+/* ── CONTENT PANELS ──────────────────────────── */
+.panel { display: none; padding: 32px 40px 60px; }
+.panel.active { display: block; }
+
+/* ── SECTION HEADER ──────────────────────────── */
+.sec-head { margin-bottom: 24px; }
+.sec-label {
+  font-size: 10px; font-weight: 700; letter-spacing: .15em;
+  text-transform: uppercase; color: var(--red);
+  margin-bottom: 4px;
+}
+h2 { font-size: 22px; font-weight: 700; color: var(--navy-dark); margin-bottom: 4px; }
+.sec-desc { font-size: 13px; color: var(--text-light); max-width: 580px; }
+
+/* ── CARDS ───────────────────────────────────── */
+.card {
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  position: relative;
+  transition: box-shadow .2s;
+}
+.card:hover { box-shadow: 0 4px 20px rgba(0,48,135,.08); }
+.card-title { font-size: 14px; font-weight: 700; color: var(--navy-dark); margin-bottom: 3px; }
+.card-sub { font-size: 12px; color: var(--text-light); margin-bottom: 18px; }
+
+.card.accent-navy { border-top: 3px solid var(--navy); }
+.card.accent-red  { border-top: 3px solid var(--red); }
+.card.accent-blue { border-top: 3px solid var(--blue-acc); }
+
+/* ── GRIDS ───────────────────────────────────── */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+.g4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+.mb20 { margin-bottom: 20px; }
+.mb32 { margin-bottom: 32px; }
+
+/* ── STAT CARDS ──────────────────────────────── */
+.stat-card {
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 22px;
+  position: relative;
+}
+.stat-card.navy { border-left: 4px solid var(--navy); }
+.stat-card.red  { border-left: 4px solid var(--red); }
+.stat-card.blue { border-left: 4px solid var(--blue-acc); }
+.stat-card.green{ border-left: 4px solid #22c55e; }
+.stat-num {
+  font-size: 34px; font-weight: 800; line-height: 1;
+  margin-bottom: 4px;
+}
+.stat-num.navy { color: var(--navy); }
+.stat-num.red  { color: var(--red); }
+.stat-num.blue { color: var(--blue-acc); }
+.stat-num.green{ color: #16a34a; }
+.stat-label { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--text-light); }
+.stat-sub  { font-size: 12px; color: var(--text-light); margin-top: 4px; }
+.stat-file {
+  position: absolute; top: 16px; right: 16px;
+  font-size: 10px; font-weight: 700; letter-spacing: .05em;
+  padding: 3px 8px; border-radius: 3px; text-transform: uppercase;
+}
+.file-mm { background: rgba(0,48,135,.1); color: var(--navy); }
+.file-sy { background: rgba(200,16,46,.1); color: var(--red); }
+
+/* ── COMPARE COLS ────────────────────────────── */
+.cmp-wrap { display: flex; gap: 20px; }
+.cmp-col {
+  flex: 1; background: var(--bg-white); border: 1px solid var(--border);
+  border-radius: 10px; padding: 24px;
+}
+.cmp-col.navy { border-top: 4px solid var(--navy); }
+.cmp-col.red  { border-top: 4px solid var(--red); }
+.cmp-name { font-size: 17px; font-weight: 800; margin-bottom: 2px; }
+.cmp-file { font-size: 11px; color: var(--text-light); font-family: 'IBM Plex Mono', monospace; margin-bottom: 20px; }
+.cmp-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--bg); }
+.cmp-row:last-child { border: none; }
+.cmp-k { font-size: 13px; color: var(--text-mid); }
+.cmp-v { font-size: 18px; font-weight: 700; color: var(--text); }
+
+/* ── DONUT ───────────────────────────────────── */
+.donut-row { display: flex; gap: 20px; align-items: center; }
+.donut-labels { display: flex; flex-direction: column; gap: 14px; flex: 1; }
+.dl-item { display: flex; align-items: center; gap: 10px; }
+.dl-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.dl-val { font-size: 20px; font-weight: 700; color: var(--text); line-height: 1; }
+.dl-txt { font-size: 12px; color: var(--text-light); }
+
+/* ── PROGRESS BARS ───────────────────────────── */
+.prog-list { display: flex; flex-direction: column; gap: 14px; }
+.prog-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+.prog-name { font-size: 13px; color: var(--text); max-width: 74%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prog-val { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: var(--navy); }
+.prog-track { height: 7px; background: var(--bg); border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
+.prog-fill { height: 100%; border-radius: 4px; width: 0%; transition: width 1.1s cubic-bezier(.4,0,.2,1); }
+
+/* ── HEAT TABLE ──────────────────────────────── */
+.htable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.htable thead tr { background: var(--navy-dark); }
+.htable th {
+  font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: rgba(255,255,255,.7); padding: 11px 16px; text-align: left;
+}
+.htable tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; }
+.htable tbody tr:hover { background: var(--bg); }
+.htable td { padding: 10px 16px; vertical-align: middle; }
+.pill {
+  display: inline-block; padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; font-family: 'IBM Plex Mono', monospace;
+}
+.pill-mm { background: rgba(0,48,135,.1); color: var(--navy); }
+.pill-sy { background: rgba(200,16,46,.1); color: var(--red); }
+.heat-chip {
+  display: inline-block; padding: 3px 10px; border-radius: 4px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600;
+}
+.desc-cell { font-size: 12px; color: var(--text); max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+
+/* ── INSIGHT BOXES ───────────────────────────── */
+.insight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ib {
+  background: var(--bg-white); border: 1px solid var(--border);
+  border-left: 4px solid var(--ibc, var(--navy));
+  border-radius: 8px; padding: 20px 22px;
+}
+.ib-icon { font-size: 22px; margin-bottom: 10px; }
+.ib-title { font-size: 14px; font-weight: 700; color: var(--navy-dark); margin-bottom: 6px; }
+.ib-body { font-size: 13px; color: var(--text-mid); line-height: 1.7; }
+.ib-body strong { color: var(--text); }
+
+
+/* ── FOOTER ──────────────────────────────────── */
+footer {
+  background: var(--navy-dark);
+  padding: 20px 40px;
+  display: flex; justify-content: space-between; align-items: center;
+  color: rgba(255,255,255,.4); font-size: 12px;
+}
+footer span:first-child { color: rgba(255,255,255,.7); font-weight: 500; }
+
+@media (max-width: 860px) {
+  .g2,.g3,.g4,.cmp-wrap,.insight-grid { grid-template-columns: 1fr; flex-direction: column; }
+  main,.hero,.tabs-wrapper { padding-left: 20px; padding-right: 20px; }
+  .panel { padding: 24px 20px 48px; }
+}
+.file-btn {
+  background: #003087;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.file-btn:hover {
+  background: #C8102E;
+  transform: translateY(-1px);
+}
+</style>
+</head>
+<body>
+
+<!-- ── TOP NAV ───────────────────────────────────────────── -->
+<nav class="topnav">
+  <div class="nav-brand">
+    <div class="nav-logo">T</div>
+    <div>
+      <div class="nav-title">Temenos Quality Insights</div>
+      <div class="nav-sub">Duplicate Description Analysis · 2024</div>
+    </div>
+  </div>
+  <div class="nav-badge">Data Audit Report</div>
+</nav>
+
+<!-- ── HERO ─────────────────────────────────────────────── -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-tag">Findings Pitch · Test Scenario Integrity</div>
+    <h1>Duplicate <span>Description</span><br>Analysis Report</h1>
+    <p class="hero-desc">Identifying data quality issues across the MM Money Market and SY Account delimited datasets. Click a module tab below to drill into each finding.</p>
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-num">2</div><div class="kpi-label">Files Audited</div></div>
+      <div class="kpi"><div class="kpi-num">1,075</div><div class="kpi-label">Total Records</div></div>
+      <div class="kpi"><div class="kpi-num red">209</div><div class="kpi-label">Duplicate Rows</div></div>
+      <div class="kpi"><div class="kpi-num red">19.4%</div><div class="kpi-label">Overall Dup. Rate</div></div>
+      <div class="kpi"><div class="kpi-num">52</div><div class="kpi-label">Unique Dup. Descs</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODULE TABS ───────────────────────────────────────── -->
+<div class="tabs-wrapper">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('overview')">
+      <span class="tab-icon">📊</span> Overview <span class="tab-count">6 KPIs</span>
+    </button>
+    <button class="tab-btn" onclick="showTab('comparison')">
+      <span class="tab-icon">⚖️</span> File Comparison <span class="tab-count">2 files</span>
+    </button>
+    <button class="tab-btn" onclick="showTab('charts')">
+      <span class="tab-icon">📈</span> Visual Charts <span class="tab-count">4 charts</span>
+    </button>
+    <button class="tab-btn" onclick="showTab('mm')">
+      <span class="tab-icon">🏦</span> MM Money Market <span class="tab-count">158 dups</span>
+    </button>
+    <button class="tab-btn" onclick="showTab('sy')">
+      <span class="tab-icon">📋</span> SY Account <span class="tab-count">51 dups</span>
+    </button>
+
+    <button class="tab-btn" onclick="showTab('heatmap')">
+      <span class="tab-icon">🌡️</span> Severity Heatmap <span class="tab-count">15 rows</span>
+    </button>
+    <button class="tab-btn" onclick="showTab('findings')">
+      <span class="tab-icon">💡</span> Key Findings <span class="tab-count">4 insights</span>
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PANEL 1 · OVERVIEW
+═════════════════════════════════════════════════════════ -->
+<div id="tab-overview" class="panel active">
+  <div class="sec-head">
+    <div class="sec-label">01 — Executive Summary</div>
+    <h2>At a Glance</h2>
+    <p class="sec-desc">Top-line metrics from both datasets combined into a single dashboard view.</p>
+  </div>
+  <div class="g4 mb32">
+    <div class="stat-card navy"><span class="stat-file file-mm">MM File</span><div class="stat-num navy">986</div><div class="stat-label">Total Records</div><div class="stat-sub">Scid_mm_money_market</div></div>
+    <div class="stat-card red"><span class="stat-file file-mm">MM File</span><div class="stat-num red">158</div><div class="stat-label">Duplicate Rows</div><div class="stat-sub">46 unique descriptions</div></div>
+    <div class="stat-card navy"><span class="stat-file file-sy">SY File</span><div class="stat-num navy">89</div><div class="stat-label">Total Records</div><div class="stat-sub">SY_ACC_delimited</div></div>
+    <div class="stat-card red"><span class="stat-file file-sy">SY File</span><div class="stat-num red">51</div><div class="stat-label">Duplicate Rows</div><div class="stat-sub">6 unique descriptions</div></div>
+  </div>
+  <div class="g3">
+    <div class="stat-card blue"><div class="stat-num blue">16.0%</div><div class="stat-label">MM Duplication Rate</div><div class="stat-sub">Below average — but 46 groups affected</div></div>
+    <div class="stat-card red"><div class="stat-num red">57.3%</div><div class="stat-label">SY Duplication Rate</div><div class="stat-sub">Critical — majority of file is duplicated</div></div>
+    <div class="stat-card green"><div class="stat-num green">866</div><div class="stat-label">Total Clean Rows</div><div class="stat-sub">828 MM + 38 SY — 80.6% of all records</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PANEL 2 · FILE COMPARISON
+═════════════════════════════════════════════════════════ -->
+<div id="tab-comparison" class="panel">
+  <div class="sec-head">
+    <div class="sec-label">02 — Side-by-Side</div>
+    <h2>Dataset Health Comparison</h2>
+    <p class="sec-desc">Direct comparison of all key quality metrics between the two delimited files.</p>
+  </div>
+  <div class="cmp-wrap">
+    <div class="cmp-col navy">
+      <div class="cmp-name" style="color:var(--navy)">MM Money Market</div>
+      <div class="cmp-file">Scid_mm_money_market_delimited.xlsx</div>
+      <div class="cmp-row"><span class="cmp-k">Total Rows</span><span class="cmp-v">986</span></div>
+      <div class="cmp-row"><span class="cmp-k">Duplicate Rows</span><span class="cmp-v" style="color:var(--red)">158</span></div>
+      <div class="cmp-row"><span class="cmp-k">Clean Rows</span><span class="cmp-v" style="color:#16a34a">828</span></div>
+      <div class="cmp-row"><span class="cmp-k">Unique Dup. Descriptions</span><span class="cmp-v" style="color:var(--navy)">46</span></div>
+      <div class="cmp-row"><span class="cmp-k">Duplication Rate</span><span class="cmp-v" style="color:var(--red)">16.0%</span></div>
+      <div class="cmp-row"><span class="cmp-k">Max Single Description</span><span class="cmp-v">10×</span></div>
+      <div class="cmp-row"><span class="cmp-k">Primary Application</span><span class="cmp-v" style="font-size:13px;font-family:'IBM Plex Mono',monospace">MM.MONEY.MARKET</span></div>
+    </div>
+    <div class="cmp-col red">
+      <div class="cmp-name" style="color:var(--red)">SY Account</div>
+      <div class="cmp-file">SY_ACC_delimited.xlsx</div>
+      <div class="cmp-row"><span class="cmp-k">Total Rows</span><span class="cmp-v">89</span></div>
+      <div class="cmp-row"><span class="cmp-k">Duplicate Rows</span><span class="cmp-v" style="color:var(--red)">51</span></div>
+      <div class="cmp-row"><span class="cmp-k">Clean Rows</span><span class="cmp-v" style="color:#16a34a">38</span></div>
+      <div class="cmp-row"><span class="cmp-k">Unique Dup. Descriptions</span><span class="cmp-v" style="color:var(--red)">6</span></div>
+      <div class="cmp-row"><span class="cmp-k">Duplication Rate</span><span class="cmp-v" style="color:var(--red)">57.3%</span></div>
+      <div class="cmp-row"><span class="cmp-k">Max Single Description</span><span class="cmp-v">21×</span></div>
+      <div class="cmp-row"><span class="cmp-k">Primary Application</span><span class="cmp-v" style="font-size:13px;font-family:'IBM Plex Mono',monospace">SY.ACCU.DECU</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PANEL 3 · CHARTS
+═════════════════════════════════════════════════════════ -->
+<div id="tab-charts" class="panel">
+  <div class="sec-head">
+    <div class="sec-label">03 — Visual Analytics</div>
+    <h2>Charts &amp; Distributions</h2>
+    <p class="sec-desc">Four visualisations showing the duplication patterns across both datasets.</p>
+  </div>
+  <div class="g2 mb20">
+    <div class="card accent-navy">
+      <div class="card-title">MM Money Market — Row Composition</div>
+      <div class="card-sub">Clean vs duplicate share of total records</div>
+      <div class="donut-row">
+        <div style="max-width:170px;flex-shrink:0;"><canvas id="donutMM" height="170"></canvas></div>
+        <div class="donut-labels">
+          <div class="dl-item"><div class="dl-dot" style="background:var(--navy)"></div><div><div class="dl-val">828</div><div class="dl-txt">Clean rows (84.0%)</div></div></div>
+          <div class="dl-item"><div class="dl-dot" style="background:var(--red)"></div><div><div class="dl-val">158</div><div class="dl-txt">Duplicate rows (16.0%)</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card accent-red">
+      <div class="card-title">SY Account — Row Composition</div>
+      <div class="card-sub">Clean vs duplicate share of total records</div>
+      <div class="donut-row">
+        <div style="max-width:170px;flex-shrink:0;"><canvas id="donutSY" height="170"></canvas></div>
+        <div class="donut-labels">
+          <div class="dl-item"><div class="dl-dot" style="background:var(--blue-acc)"></div><div><div class="dl-val">38</div><div class="dl-txt">Clean rows (42.7%)</div></div></div>
+          <div class="dl-item"><div class="dl-dot" style="background:var(--red)"></div><div><div class="dl-val">51</div><div class="dl-txt">Duplicate rows (57.3%)</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card accent-blue mb20">
+    <div class="card-title">Total vs Duplicate vs Clean — Grouped Bar</div>
+    <div class="card-sub">Side-by-side count comparison between both files</div>
+    <div style="height:240px;"><canvas id="barGrouped"></canvas></div>
+  </div>
+  <div class="card" style="border-top:3px solid var(--red)">
+    <div class="card-title">Duplication Rate by File (%)</div>
+    <div class="card-sub">SY Account's 57.3% rate is 3.6× worse than MM's 16.0%</div>
+    <div style="height:180px;"><canvas id="barRate"></canvas></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PANEL 4 · MM MONEY MARKET
+═════════════════════════════════════════════════════════ -->
+<div id="tab-mm" class="panel">
+  <div class="sec-head">
+    <div class="sec-label">04 — MM Money Market Deep Dive</div>
+    <h2>Scid_mm_money_market — Duplicate Analysis</h2>
+      <a href="https://docs.google.com/spreadsheets/d/1WiIds-KfdN8Az8mUtx4lHXFj1rXGsnQR/edit?usp=drive_link&ouid=105424369009839867770&rtpof=true&sd=true" target="_blank">
+    <button class="file-btn">📄 Total Records (986)</button>
+  </a>
+
+  <a href="https://docs.google.com/spreadsheets/d/1kIJ67tcv_0_8Qawn8in77vlKOdAUCQwC/edit?usp=drive_link&ouid=105424369009839867770&rtpof=true&sd=true" target="_blank">
+    <button class="file-btn">⚠️ Duplicate Rows (158)</button>
+  </a>
+
+  </div>
+  <div class="g4 mb32">
+    <div class="stat-card navy"><div class="stat-num navy">986</div><div class="stat-label">Total Records</div></div>
+    <div class="stat-card red"><div class="stat-num red">158</div><div class="stat-label">Dup. Rows</div></div>
+    <div class="stat-card navy"><div class="stat-num navy">46</div><div class="stat-label">Unique Dup. Descs</div></div>
+    <div class="stat-card blue"><div class="stat-num blue">16.0%</div><div class="stat-label">Dup. Rate</div></div>
+  </div>
+  <div class="g2">
+    <div class="card accent-navy">
+      <div class="card-title">Top 8 Duplicate Descriptions</div>
+      <div class="card-sub">By occurrence count (max: 10×)</div>
+      <div class="prog-list" id="mmProg"></div>
+    </div>
+    <div class="card accent-red">
+      <div class="card-title">Where Duplicates Occur</div>
+      <div class="card-sub">93 duplicate rows start with CUSTOMER · 65 with MM.MONEY.MARKET</div>
+      <div style="height:260px;"><canvas id="mmPieApp"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PANEL 5 · SY ACCOUNT
+═════════════════════════════════════════════════════════ -->
+<div id="tab-sy" class="panel">
+  <div class="sec-head">
+    <div class="sec-label">05 — SY Account Deep Dive</div>
+    <h2>SY_ACC_delimited — Duplicate Analysis</h2>
+    <div class="sec-desc" style="display:flex; gap:10px; flex-wrap:wrap;">
+<a href="https://docs.google.com/spreadsheets/d/1ldGH6R-7qyByrQrNJY4mAGsl8V_H_RDr/edit?usp=drive_link&ouid=105424369009839867770&rtpof=true&sd=true" target="_blank">
+    <button class="file-btn">📄 Total Records (89)</button>
+  </a>
+
+  <a href="https://docs.google.com/spreadsheets/d/1Jc1V3C9rIxt5Q1OqhhRJQcJw19d2BVze/edit?usp=drive_link&ouid=105424369009839867770&rtpof=true&sd=true" target="_blank">
+    <button class="file-btn">⚠️ Duplicate Rows (51)</button>
+  </a>
+
+
+
+</div>
+  </div>
+  <div class="g4 mb32">
+    <div class="stat-card navy"><div class="stat-num navy">89</div><div class="stat-label">Total Records</div></div>
+    <div class="stat-card red"><div class="stat-num red">51</div><div class="stat-label">Dup. Rows</div></div>
+    <div class="stat-card navy"><div class="stat-num navy">6</div><div class="stat-label">Unique Dup. Descs</div></div>
+    <div class="stat-card red"><div class="stat-num red">57.3%</div><div class="stat-label">Dup. Rate</div></div>
+  </div>
+  <div class="g2">
+    <div class="card accent-red">
+      <div class="card-title">All 6 Duplicate Descriptions</div>
+      <div class="card-sub">By occurrence count (max: 21×)</div>
+      <div class="prog-list" id="syProg"></div>
+    </div>
+    <div class="card accent-navy">
+      <div class="card-title">Application Breakdown of Duplicates</div>
+      <div class="card-sub">48 dup rows in SY.ACCU.DECU · 3 in CUSTOMER</div>
+      <div style="height:260px;"><canvas id="syPieApp"></canvas></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PANEL 7 · HEATMAP
+═════════════════════════════════════════════════════════ -->
+<div id="tab-heatmap" class="panel">
+  <div class="sec-head">
+    <div class="sec-label">07 — Severity Heatmap</div>
+    <h2>Duplicate Intensity Table</h2>
+    <p class="sec-desc">All top duplicate descriptions ranked by frequency with color-coded severity labels.</p>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table class="htable">
+      <thead>
+        <tr>
+          <th>Dataset</th>
+          <th>Description</th>
+          <th>Occurrences</th>
+          <th>Severity</th>
+        </tr>
+      </thead>
+      <tbody id="heatBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PANEL 8 · KEY FINDINGS
+═════════════════════════════════════════════════════════ -->
+<div id="tab-findings" class="panel">
+  <div class="sec-head">
+    <div class="sec-label">08 — Key Findings &amp; Recommendations</div>
+    <h2>What This Means &amp; Next Steps</h2>
+    <p class="sec-desc">Actionable insights derived from the duplicate analysis across both Temenos test scenario datasets.</p>
+  </div>
+  <div class="insight-grid">
+    <div class="ib" style="--ibc:#C8102E">
+      <div class="ib-icon">🚨</div>
+      <div class="ib-title">SY Account File is Most Critical</div>
+      <div class="ib-body">With a <strong>57.3% duplication rate</strong>, more than half of SY_ACC contains repeated descriptions. <strong>"EN 1426890"</strong> alone appears 21 times — an entire test group bulk-copied without updating the description field. Immediate cleanup is required.</div>
+    </div>
+    <div class="ib" style="--ibc:#003087">
+      <div class="ib-icon">⚠️</div>
+      <div class="ib-title">MM File Has the Widest Spread</div>
+      <div class="ib-body">With <strong>46 unique duplicate groups</strong>, the MM file's duplication is far broader. The top 3 descriptions each appear <strong>10 times</strong> and all relate to TEST BASE MERGER scenarios — suggesting bulk copy-paste during test creation cycles.</div>
+    </div>
+    <div class="ib" style="--ibc:#00A3E0">
+      <div class="ib-icon">🔍</div>
+      <div class="ib-title">Naming Inconsistency Hides More Duplicates</div>
+      <div class="ib-body"><strong>"EN 1388099"</strong> (space) and <strong>"EN-1388099"</strong> (hyphen) reference the same enhancement but are stored as different values — creating 11 hidden duplicates. A fuzzy-match or normalization pass would surface even more cross-file overlap.</div>
+    </div>
+    <div class="ib" style="--ibc:#22c55e">
+      <div class="ib-icon">✅</div>
+      <div class="ib-title">Recommended Actions</div>
+      <div class="ib-body">
+        1. <strong>Enforce unique description constraint</strong> at data entry.<br>
+        2. <strong>Standardize to EN-XXXXXXX</strong> naming format.<br>
+        3. <strong>Review MM's 46 dup groups</strong> — verify if SCENARIO.IDs truly differ.<br>
+        4. <strong>Prioritize SY_ACC cleanup</strong> due to 57% severity rate.<br>
+        5. <strong>Automate a weekly duplicate scan</strong> on both files.
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>Temenos · Duplicate Description Analysis · MM Money Market &amp; SY Account Datasets</span>
+  <span>1,075 total records audited · 209 duplicate rows identified</span>
+</footer>
+
+<script>
+// ── TAB SWITCHER ─────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  // lazy-init charts on first visit
+  if (!window._chartsInit) { initCharts(); window._chartsInit = true; }
+  if (id === 'modules') buildModules();
+  if (id === 'heatmap') buildHeat();
+  if (id === 'mm') buildMMProg();
+  if (id === 'sy') buildSYProg();
+}
+
+// ── CHART DEFAULTS ───────────────────────────────────────
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#718096';
+
+function initCharts() {
+  const gridCol = '#E8ECF2';
+
+  // Donut MM
+  new Chart(document.getElementById('donutMM'), {
+    type: 'doughnut',
+    data: { datasets: [{ data: [828, 158], backgroundColor: ['#003087','#C8102E'], borderWidth: 0, hoverOffset: 5 }] },
+    options: { cutout: '72%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.parsed} rows` } } } }
+  });
+
+  // Donut SY
+  new Chart(document.getElementById('donutSY'), {
+    type: 'doughnut',
+    data: { datasets: [{ data: [38, 51], backgroundColor: ['#00A3E0','#C8102E'], borderWidth: 0, hoverOffset: 5 }] },
+    options: { cutout: '72%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.parsed} rows` } } } }
+  });
+
+  // Grouped bar
+  new Chart(document.getElementById('barGrouped'), {
+    type: 'bar',
+    data: {
+      labels: ['MM Money Market', 'SY Account'],
+      datasets: [
+        { label: 'Total Rows', data: [986, 89], backgroundColor: ['rgba(0,48,135,.15)','rgba(0,163,224,.15)'], borderColor: ['#003087','#00A3E0'], borderWidth: 2, borderRadius: 5 },
+        { label: 'Duplicate Rows', data: [158, 51], backgroundColor: 'rgba(200,16,46,.7)', borderColor: '#C8102E', borderWidth: 2, borderRadius: 5 },
+        { label: 'Clean Rows', data: [828, 38], backgroundColor: 'rgba(34,197,94,.5)', borderColor: '#16a34a', borderWidth: 2, borderRadius: 5 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { boxWidth: 11, padding: 18 } } },
+      scales: {
+        x: { grid: { color: gridCol } },
+        y: { grid: { color: gridCol } }
+      }
+    }
+  });
+
+  // Rate bar
+  new Chart(document.getElementById('barRate'), {
+    type: 'bar',
+    data: {
+      labels: ['MM Money Market', 'SY Account'],
+      datasets: [{ label: 'Duplication Rate (%)', data: [16.0, 57.3], backgroundColor: ['rgba(0,48,135,.7)','rgba(200,16,46,.8)'], borderColor: ['#003087','#C8102E'], borderWidth: 2, borderRadius: 5 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.parsed.x}%` } } },
+      scales: {
+        x: { max: 100, grid: { color: gridCol }, ticks: { callback: v => v + '%' } },
+        y: { grid: { display: false }, ticks: { font: { size: 13, weight: '600' }, color: '#1A1A2E' } }
+      }
+    }
+  });
+
+  // MM pie app
+  new Chart(document.getElementById('mmPieApp'), {
+    type: 'doughnut',
+    data: {
+      labels: ['CUSTOMER', 'MM.MONEY.MARKET'],
+      datasets: [{ data: [93, 65], backgroundColor: ['#003087','#C8102E'], borderWidth: 0, hoverOffset: 5 }]
+    },
+    options: {
+      cutout: '60%',
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 11, padding: 16, font: { size: 12 } } },
+        tooltip: { callbacks: { label: c => ` ${c.parsed} dup rows` } }
+      }
+    }
+  });
+
+  // SY pie app
+  new Chart(document.getElementById('syPieApp'), {
+    type: 'doughnut',
+    data: {
+      labels: ['SY.ACCU.DECU', 'CUSTOMER'],
+      datasets: [{ data: [48, 3], backgroundColor: ['#C8102E','#003087'], borderWidth: 0, hoverOffset: 5 }]
+    },
+    options: {
+      cutout: '60%',
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 11, padding: 16, font: { size: 12 } } },
+        tooltip: { callbacks: { label: c => ` ${c.parsed} dup rows` } }
+      }
+    }
+  });
+}
+
+// ── PROGRESS BARS ─────────────────────────────────────────
+let mmProgBuilt = false, syProgBuilt = false;
+
+function buildMMProg() {
+  if (mmProgBuilt) return;
+  mmProgBuilt = true;
+  const data = [
+    { n: 'AM-Back Value MM Txn — TEST BASE MERGER', c: 10 },
+    { n: 'AM-Forward Value MM Txn — TEST BASE MERGER', c: 10 },
+    { n: 'CREATING CUSTOMER FOR mm DEAL / MM BLOTTER', c: 10 },
+    { n: 'AM-Money Market Transaction TEST BASE MERGER', c: 8 },
+    { n: 'Creation of MM.MONEY.MARKET | Creation of Customer', c: 7 },
+    { n: 'Create Entity Customer | Funds Transfer | MM Deposit…', c: 6 },
+    { n: 'Creating CUSTOMER – tag 34E MT320 defect 2137809', c: 6 },
+    { n: 'Creating CUSTOMER – tag 34E MT320 defect 2504798', c: 5 },
+  ];
+  const el = document.getElementById('mmProg');
+  data.forEach(d => {
+    el.innerHTML += `<div><div class="prog-head"><span class="prog-name" title="${d.n}">${d.n}</span><span class="prog-val">${d.c}×</span></div><div class="prog-track"><div class="prog-fill" data-w="${d.c/10*100}%" style="background:var(--navy)"></div></div></div>`;
+  });
+  setTimeout(() => el.querySelectorAll('.prog-fill').forEach(f => f.style.width = f.dataset.w), 300);
+}
+
+function buildSYProg() {
+  if (syProgBuilt) return;
+  syProgBuilt = true;
+  const data = [
+    { n: 'EN 1426890', c: 21 },
+    { n: 'EN1219163', c: 12 },
+    { n: 'EN 1388099', c: 8 },
+    { n: 'EN1219191|EN1219191|EN1219191|EN1219191', c: 4 },
+    { n: 'EN-1388099', c: 3 },
+    { n: 'ENHANCEMENT 2000245 (14-script chain)', c: 3 },
+  ];
+  const el = document.getElementById('syProg');
+  data.forEach(d => {
+    el.innerHTML += `<div><div class="prog-head"><span class="prog-name" title="${d.n}">${d.n}</span><span class="prog-val" style="color:var(--red)">${d.c}×</span></div><div class="prog-track"><div class="prog-fill" data-w="${d.c/21*100}%" style="background:var(--red)"></div></div></div>`;
+  });
+  setTimeout(() => el.querySelectorAll('.prog-fill').forEach(f => f.style.width = f.dataset.w), 300);
+}
+
+// ── MODULE BARS ───────────────────────────────────────────
+let modulesBuilt = false;
+function buildModules() {
+  if (modulesBuilt) return; modulesBuilt = true;
+
+  function renderMod(id, data, maxVal, color) {
+    const el = document.getElementById(id);
+    data.forEach(d => {
+      const pct = (d.c / maxVal * 100).toFixed(1);
+      el.innerHTML += `
+        <div class="mod-row">
+          <span class="mod-name" title="${d.n}">${d.n}</span>
+          <div class="mod-track">
+            <div class="mod-fill" data-w="${pct}%" style="background:${color}">
+              <span class="mod-fill-label">${d.c}</span>
+            </div>
+          </div>
+          <span class="mod-count">${d.c} rows</span>
+        </div>`;
+    });
+    setTimeout(() => el.querySelectorAll('.mod-fill').forEach(f => f.style.width = f.dataset.w), 300);
+  }
+
+  renderMod('mmModAll', [
+    { n: 'CUSTOMER', c: 696 },
+    { n: 'MM.MONEY.MARKET', c: 241 },
+    { n: 'PERIODIC.INTEREST', c: 5 },
+    { n: 'ACCOUNT', c: 5 },
+    { n: 'SECTOR', c: 3 },
+    { n: 'SEAT.FUNCTIONALITY.COMPONENT', c: 3 },
+    { n: 'LD.LOANS.AND.DEPOSITS', c: 2 },
+    { n: 'AA.ARRANGEMENT.ACTIVITY', c: 2 },
+  ], 696, '#003087');
+
+  renderMod('mmModDup', [
+    { n: 'CUSTOMER', c: 93 },
+    { n: 'MM.MONEY.MARKET', c: 65 },
+  ], 93, '#C8102E');
+
+  renderMod('syModAll', [
+    { n: 'SY.ACCU.DECU', c: 55 },
+    { n: 'CUSTOMER', c: 30 },
+    { n: 'SECURITY.MASTER', c: 2 },
+    { n: 'DX.CONTRACT.MASTER', c: 1 },
+    { n: 'SEC.OPEN.ORDER', c: 1 },
+  ], 55, '#0057A8');
+
+  renderMod('syModDup', [
+    { n: 'SY.ACCU.DECU', c: 48 },
+    { n: 'CUSTOMER', c: 3 },
+  ], 48, '#C8102E');
+}
+
+// ── HEAT TABLE ────────────────────────────────────────────
+let heatBuilt = false;
+function buildHeat() {
+  if (heatBuilt) return; heatBuilt = true;
+
+  const rows = [
+    { ds: 'SY Account', f: 'sy', desc: 'EN 1426890', c: 21 },
+    { ds: 'SY Account', f: 'sy', desc: 'EN1219163', c: 12 },
+    { ds: 'MM Money Market', f: 'mm', desc: 'AM-Back Value MM Txn — TEST BASE MERGER', c: 10 },
+    { ds: 'MM Money Market', f: 'mm', desc: 'AM-Forward Value MM Txn — TEST BASE MERGER', c: 10 },
+    { ds: 'MM Money Market', f: 'mm', desc: 'CREATING CUSTOMER FOR mm DEAL / MM BLOTTER', c: 10 },
+    { ds: 'SY Account', f: 'sy', desc: 'EN 1388099', c: 8 },
+    { ds: 'MM Money Market', f: 'mm', desc: 'AM-Money Market Transaction TEST BASE MERGER', c: 8 },
+    { ds: 'MM Money Market', f: 'mm', desc: 'Creation of MM.MONEY.MARKET | Creation of Customer', c: 7 },
+    { ds: 'MM Money Market', f: 'mm', desc: 'Create Entity Customer | Funds Transfer | MM Deposit…', c: 6 },
+    { ds: 'MM Money Market', f: 'mm', desc: 'Creating CUSTOMER – tag 34E MT320 defect 2137809', c: 6 },
+    { ds: 'MM Money Market', f: 'mm', desc: 'Creating CUSTOMER – tag 34E MT320 defect 2504798', c: 5 },
+    { ds: 'MM Money Market', f: 'mm', desc: 'CREATE CUSTOMER | PLACE A MM TRANSACTION | PLACE A LD…', c: 5 },
+    { ds: 'SY Account', f: 'sy', desc: 'EN1219191|EN1219191|EN1219191|EN1219191', c: 4 },
+    { ds: 'SY Account', f: 'sy', desc: 'EN-1388099', c: 3 },
+    { ds: 'SY Account', f: 'sy', desc: 'ENHANCEMENT 2000245 (14-script chain)', c: 3 },
+  ];
+
+  function sev(n) {
+    if (n >= 15) return { bg: 'rgba(200,16,46,.15)', color: '#C8102E', label: 'CRITICAL' };
+    if (n >= 10) return { bg: 'rgba(200,80,0,.12)', color: '#d9600a', label: 'HIGH' };
+    if (n >= 6)  return { bg: 'rgba(0,48,135,.1)', color: '#003087', label: 'MEDIUM' };
+    return { bg: 'rgba(0,163,224,.1)', color: '#0057A8', label: 'LOW' };
+  }
+
+  const tb = document.getElementById('heatBody');
+  rows.forEach(r => {
+    const s = sev(r.c);
+    tb.innerHTML += `<tr>
+      <td><span class="pill pill-${r.f}">${r.ds}</span></td>
+      <td><span class="desc-cell" title="${r.desc}">${r.desc}</span></td>
+      <td><span class="heat-chip" style="background:${s.bg};color:${s.color}">${r.c}×</span></td>
+      <td><span class="heat-chip" style="background:${s.bg};color:${s.color};font-size:10px;letter-spacing:.06em">${s.label}</span></td>
+    </tr>`;
+  });
+}
+
+// ── INIT CHARTS ON LOAD FOR DEFAULT TAB ──────────────────
+window.addEventListener('load', () => { initCharts(); window._chartsInit = true; });
+</script>
+</body>
+</html>
